@@ -22,8 +22,7 @@ ARQUIVO_DESKTOP="claudia_app.desktop"
 # 2. Verificar se o Git está instalado
 if ! command -v git &> /dev/null; then
     echo -e "${VERMELHO}Erro: O Git não está instalado!${SEM_COR}"
-    echo "Por favor, rode: sudo apt install git"
-    exit 1
+    sudo apt install -y git
 fi
 
 # 3. Baixar o código (Clone)
