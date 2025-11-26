@@ -52,6 +52,17 @@ else
     echo "Nenhum arquivo requirements.txt encontrado. Pulando dependências."
 fi
 
+echo -e "${VERDE}🎨 Verificando se o pintor (Tkinter) está em casa...${SEM_COR}"
+
+# Verifica se o python3-tk está instalado
+if ! dpkg -s python3-tk &> /dev/null; then
+    echo "⚠️ O Tkinter não foi encontrado. Instalando para você..."
+    # Aqui precisamos de sudo, o usuário vai ter que digitar a senha
+    sudo apt install -y python3-tk
+else
+    echo "✅ O Tkinter já está instalado!"
+fi
+
 # 5. Tornar o script Python executável
 chmod +x "$DIR_INSTALACAO/$NOME_EXECUTAVEL"
 
